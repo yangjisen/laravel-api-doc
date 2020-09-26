@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# 项目名称
+name=$1
+
+if [ -z ${name} ];then
+	echo 'name not found'; exit;
+fi
+
+# Doc 保存目录
+server="/c/WampServer3.2.0/www"
+
+# Sami 项目目录
+base=`pwd`
+
+# Laravel 文件保存路径
+framework="${base}/project"
+
+frameworkDir="${framework}/${name}"
+
+# Doc 保存路径
+docs="${server}/docs/${name}"
+
+# Git 地址
+url="https://github.com/laravel/${name}.git"
+
+if [ -d "${framework}" ];then
+	mkdir -p ${framework}
+fi
+
+# 切换工作目录
+cd ${framework}
+
+# 清空缓存文件
+#if [ -d "${framework}/build/${name}" ];then
+#	rm -rf ${framework}/build/${name}
+#	echo "cleared: ${framework}/build/${name}"
+#fi
+
+#if [ -d "${framework}/cache/${name}" ];then
+#	rm -rf ${framework}/cache/${name}
+#	echo "cleared: ${framework}/cache/${name}"
+#fi
+
+# Run API Docs
+if [ ! -d "${frameworkDir}" ];then
+  echo "git clone --depth=1 ${url} ${name}"
+  git clone --depth=1 ${url} ${frameworkDir}
+  if [ $? -ne 0 ];then
+	echo "git clone failed";exit;
+  fi
+else
+  cd "${frameworkDir}"
+  read -t 5 -n 1 -p "git pull [y/n](n)?" answer
+  echo ''
+  if [ "X${answer}" == "XY" -o "X${answer}" == "Xy" ];then
+    echo "git pull ${url} ${name}"
+    git pull --depth=1
+  fi
+fi
+
+# 编译文件
+${base}/vendor/bin/sami.php update ${base}/${name}.php
+
+if [ $? -ne 0 ];then
+  exit;
+fi
+
+# 删除旧的文件
+if [ -d "${docs}" ];then
+	rm -rf ${docs}
+fi
+
+mkdir -p ${docs}
+
+# Copy new docs to public path
+cp -R ${framework}/build/${name}/master ${docs}
+
+
